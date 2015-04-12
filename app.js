@@ -33,6 +33,30 @@ var opts = require('optimist')
             demand: false,
             description: 'defaults to "password", you can use "publickey,password" instead'
         },
+        docker: {
+            demand: false,
+            description: 'docker host to use with exec'
+        },
+        tlscacert: {
+            demand: false,
+            description: 'docker tls ca cert'
+        },
+        tlscert: {
+            demand: false,
+            description: 'docker tls cert'
+        },
+        tlskey: {
+            demand: false,
+            description: 'docker tls key'
+        },
+        container: {
+            demand: false,
+            description: 'docker container id to exec'
+        },
+        command: {
+            demand: false,
+            description: 'command to use with container exec'
+        },
         port: {
             demand: true,
             alias: 'p',
@@ -44,6 +68,12 @@ var runhttps = false;
 var sshport = 22;
 var sshhost = 'localhost';
 var sshauth = 'password';
+var dockerhost = 'unix:///var/run/docker.sock';
+var tlscacert = '';
+var tlscert = '';
+var tlskey = '';
+var container = '';
+var command = 'sh';
 var globalsshuser = '';
 
 if (opts.sshport) {
@@ -60,6 +90,30 @@ if (opts.sshauth) {
 
 if (opts.sshuser) {
     globalsshuser = opts.sshuser;
+}
+
+if (opts.docker) {
+    dockerhost = opts.docker;
+}
+
+if (opts.tlscacert) {
+    tlscacert = opts.tlscacert;
+}
+
+if (opts.tlscert) {
+    tlscert = opts.tlscert;
+}
+
+if (opts.tlskey) {
+    tlskey = opts.tlskey;
+}
+
+if (opts.container) {
+    container = opts.container;
+}
+
+if (opts.command) {
+    command = opts.command;
 }
 
 if (opts.sslkey && opts.sslcert) {
@@ -104,27 +158,14 @@ wss.on('request', function(request) {
         sshuser = request.resource;
         sshuser = sshuser.replace('/wetty/ssh/', '');
     }
-    if (sshuser) {
-        sshuser = sshuser + '@';
-    } else if (globalsshuser) {
-        sshuser = globalsshuser + '@';
-    }
     conn.on('message', function(msg) {
         var data = JSON.parse(msg.utf8Data);
         if (!term) {
-            if (process.getuid() == 0) {
-                term = pty.spawn('/bin/login', [], {
-                    name: 'xterm-256color',
-                    cols: 80,
-                    rows: 30
-                });
-            } else {
-                term = pty.spawn('ssh', [sshuser + sshhost, '-p', sshport, '-o', 'PreferredAuthentications=' + sshauth], {
-                    name: 'xterm-256color',
-                    cols: 80,
-                    rows: 30
-                });
-            }
+            term = pty.spawn('/usr/bin/docker', ['-H', dockerhost, '--tlscacert', tlscacert, '--tlscert', tlscert, '--tlskey', tlskey, '--tlsverify', 'exec', '-ti', container, command], {
+                name: 'xterm-256color',
+                cols: 80,
+                rows: 30
+            });
             console.log((new Date()) + " PID=" + term.pid + " STARTED on behalf of user=" + sshuser)
             term.on('data', function(data) {
                 conn.send(JSON.stringify({
