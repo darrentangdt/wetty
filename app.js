@@ -171,7 +171,7 @@ wss.on('request', function(request) {
                 cols: 80,
                 rows: 30
             });
-            console.log((new Date()) + " PID=" + term.pid + " STARTED on behalf of user=" + sshuser)
+            console.log((new Date()) + " PID=" + term.pid + " STARTED")
             term.on('data', function(data) {
                 conn.send(JSON.stringify({
                     data: data
