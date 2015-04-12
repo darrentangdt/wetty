@@ -161,7 +161,12 @@ wss.on('request', function(request) {
     conn.on('message', function(msg) {
         var data = JSON.parse(msg.utf8Data);
         if (!term) {
-            term = pty.spawn('/usr/bin/docker', ['-H', dockerhost, '--tlscacert', tlscacert, '--tlscert', tlscert, '--tlskey', tlskey, '--tlsverify', 'exec', '-ti', container, command], {
+            var args = ['-H', dockerhost];
+            if (tlscacert !== '') {
+                args.push('--tlscacert', tlscacert, '--tlscert', tlscert, '--tlskey', tlskey, '--tlsverify')
+            }
+            args.push('exec', '-ti', container, command);
+            term = pty.spawn('docker', args, {
                 name: 'xterm-256color',
                 cols: 80,
                 rows: 30
